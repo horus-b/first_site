@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Кабинет разработчика — InvestHub{% endblock %}
+
+{% block content %}
+<div class="section-header">
+  <div>
+    <h1>Кабинет разработчика</h1>
+    <p style="color:var(--muted);margin-top:7px">
+      Ваши проекты, инвесторы и заявки спонсоров.
+    </p>
+  </div>
+  <a class="btn btn-primary" href="{{ url_for('create_project') }}">
+    ＋ Создать проект
+  </a>
+</div>
+
+<div class="profile-header">
+  <div class="profile-avatar">
+    {{ (team.name or team.user.username or '?')[0]|upper }}
+  </div>
+  <div class="profile-info">
+    <h2>{{ team.name or team.user.username }}</h2>
+    <p>{{ team.field or 'Направление не указано' }} · {{ team.user.email }}</p>
+    <a class="btn btn-secondary" href="{{ url_for('team_profile') }}">
+      Настроить профиль команды
+    </a>
+  </div>
+</div>
+
+<section>
+  <div class="section-header">
+    <h2>Заявки спонсоров</h2>
+    <span style="color:var(--muted)">{{ inquiries|length }} заявок</span>
+  </div>
+
+  <div class="projects-grid">
+    {% for inquiry in inquiries %}
+      <article class="card">
+        <h3>
+          <a
+            href="{{ url_for('inquiry_detail', inquiry_id=inquiry.id) }}"
+            style="color:inherit;text-decoration:none"
+          >{{ inquiry.title }}</a>
+        </h3>
+
+        <p style="color:var(--muted)">
+          От: {{ inquiry.sponsor.company or inquiry.sponsor.user.username }}
+          · Бюджет: {{ '%.2f'|format(inquiry.budget) }} ₽
+        </p>
+
+        <p>
+          {{ inquiry.description[:180] }}
+          {% if inquiry.description|length > 180 %}…{% endif %}
+        </p>
+
+        {% if inquiry.status == 'accepted' %}
+          {% for response in inquiry.responses %}
+            {% if response.status == 'accepted' and response.team_id == team.id %}
+              <div class="flash success">
+                Вы выбраны исполнителем по этой заявке.
+              </div>
+            {% endif %}
+          {% endfor %}
+        {% else %}
+          <p style="color:var(--muted)">
+            Откликов: {{ inquiry.responses|length }}
+          </p>
+        {% endif %}
+
+        <a
+          class="btn btn-secondary"
+          href="{{ url_for('inquiry_detail', inquiry_id=inquiry.id) }}"
+        >Открыть заявку →</a>
+      </article>
+    {% else %}
+      <div class="card empty-state" style="grid-column:1/-1">
+        Подходящих заявок пока нет.
+      </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section style="margin-top:32px">
+  <div class="section-header">
+    <h2>Мои проекты</h2>
+    <span style="color:var(--muted)">{{ projects|length }} проектов</span>
+  </div>
+
+  <div class="projects-grid">
+    {% for project in projects %}
+      <article class="project-card">
+        <a
+          href="{{ url_for('project_detail', project_id=project.id) }}"
+          style="color:inherit;text-decoration:none;display:block"
+          title="Открыть проект «{{ project.title }}»"
+        >
+          <div class="project-img">
+            🧪
+            <span class="project-tag">
+              {% if project.status == 'active' %}
+                Идёт сбор
+              {% elif project.status == 'funded' %}
+                Финансирование завершено
+              {% else %}
+                {{ project.status }}
+              {% endif %}
+            </span>
+          </div>
+        </a>
+
+        <div class="project-body">
+          <h3>
+            <a
+              href="{{ url_for('project_detail', project_id=project.id) }}"
+              style="color:inherit;text-decoration:none"
+            >{{ project.title }}</a>
+          </h3>
+
+          <p style="word-break:break-word">
+            {{ project.description[:150] }}
+            {% if project.description|length > 150 %}…{% endif %}
+          </p>
+
+          <div class="project-stats" style="flex-wrap:wrap">
+            <span>Цена акции: <strong>{{ '%.2f'|format(project.share_price) }} ₽</strong></span>
+            <span>Цель: <strong>{{ '%.2f'|format(project.goal) }} ₽</strong></span>
+          </div>
+
+          <div class="progress-bar">
+            <div
+              class="progress-fill"
+              style="--progress:{{ project.progress }}%"
+            ></div>
+          </div>
+
+          <div class="progress-caption">
+            <span>
+              {{ project.sold_shares }} из {{ project.total_shares }} акций
+            </span>
+            <strong>{{ project.progress }}%</strong>
+          </div>
+
+          <h4 style="margin-top:22px">Акционеры</h4>
+
+          {% for group in project.sponsorships|groupby('sponsor_id') %}
+            {% set purchases = group.list %}
+            {% set shareholder = purchases[0].sponsor %}
+            {% set shares_owned = purchases|sum(attribute='shares') %}
+            {% set amount_paid = purchases|sum(attribute='amount') %}
+            {% set ownership = (
+              shares_owned / project.total_shares * 100
+            )|round(2) if project.total_shares else 0 %}
+
+            <div class="list-item">
+              <div class="list-item-content">
+                <strong>
+                  {{ shareholder.company or shareholder.user.username }}
+                </strong>
+                <p>{{ purchases|length }} покупок</p>
+              </div>
+
+              <div style="text-align:right">
+                <strong>{{ shares_owned }} акций</strong>
+                <p>
+                  {{ ownership }}%
+                  · {{ '%.2f'|format(amount_paid) }} ₽
+                </p>
+              </div>
+            </div>
+          {% else %}
+            <p style="color:var(--muted)">
+              У проекта пока нет акционеров.
+            </p>
+          {% endfor %}
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
+            <a
+              class="btn btn-primary"
+              href="{{ url_for('create_project_update', project_id=project.id) }}"
+            >＋ Добавить этап / отчёт</a>
+
+            <a
+              class="btn btn-secondary"
+              href="{{ url_for('project_detail', project_id=project.id) }}"
+            >Открыть проект</a>
+          </div>
+
+          {% if project.updates %}
+            <div style="margin-top:18px">
+              <h4>Последний этап</h4>
+              <strong>{{ project.updates[0].title }}</strong>
+              <p style="white-space:pre-line">
+                {{ project.updates[0].content[:180] }}
+                {% if project.updates[0].content|length > 180 %}…{% endif %}
+              </p>
+            </div>
+          {% else %}
+            <p style="color:var(--muted);margin-top:18px">
+              Отчётов пока нет.
+            </p>
+          {% endif %}
+        </div>
+      </article>
+    {% else %}
+      <div class="card empty-state" style="grid-column:1/-1">
+        <p>Проектов пока нет. Создайте проект — инвесторы смогут найти его в каталоге.</p>
+        <p style="margin-top:16px">
+          <a class="btn btn-primary" href="{{ url_for('create_project') }}">
+            Создать проект
+          </a>
+        </p>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

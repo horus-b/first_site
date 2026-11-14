@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Кабинет инвестора — InvestHub{% endblock %}
+{% block content %}
+<div class="section-header">
+  <div>
+    <h1>Кабинет инвестора</h1>
+    <p style="color:var(--muted);margin-top:7px">Покупайте акции проектов и следите за отчётами команд.</p>
+  </div>
+  <a class="btn btn-primary" href="{{ url_for('projects_catalog') }}">Весь каталог</a>
+</div>
+
+<div class="profile-header">
+  <div class="profile-avatar">{{ (sponsor.company or sponsor.user.username or '?')[0]|upper }}</div>
+  <div class="profile-info">
+    <h2>{{ sponsor.company or sponsor.user.username }}</h2>
+    <p>Инвестор · {{ sponsor.user.email }}</p>
+    <a class="btn btn-secondary" href="{{ url_for('sponsor_profile') }}">Настроить профиль</a>
+  </div>
+</div>
+
+<div class="section-header">
+  <h2>Проекты с доступными акциями</h2>
+  <span style="color:var(--muted)">{{ projects|length }} проектов</span>
+</div>
+<div class="projects-grid">
+  {% for project in projects %}
+    <article class="project-card">
+      <a href="{{ url_for('project_detail', project_id=project.id) }}" style="color:inherit;text-decoration:none;display:block">
+        <div class="project-img">🧪<span class="project-tag">{{ project.team.field or 'Проект' }}</span></div>
+      </a>
+      <div class="project-body">
+        <h3><a href="{{ url_for('project_detail', project_id=project.id) }}" style="color:inherit;text-decoration:none">{{ project.title }}</a></h3>
+        <p>{{ project.description[:155] }}{% if project.description|length > 155 %}…{% endif %}</p>
+        <div class="project-stats"><span>Команда: <strong>{{ project.team.name or project.team.user.username or 'Команда' }}</strong></span></div>
+        <div class="progress-bar"><div class="progress-fill" style="--progress:{{ project.progress }}%"></div></div>
+        <div class="progress-caption"><span>{{ project.sold_shares }} / {{ project.total_shares }} акций</span><strong>{{ project.progress }}%</strong></div>
+        <div class="project-stats" style="margin-top:8px;flex-wrap:wrap">
+          <span>{{ '%.2f'|format(project.share_price) }} ₽ / акция</span>
+          <span>Цель: {{ '%.2f'|format(project.goal) }} ₽</span>
+          <span>Этап: {{ project.updates[0].title if project.updates else 'Подготовка проекта' }}</span>
+        </div>
+        {% if project.shares_left > 0 %}
+          <form class="donate-form" method="post" action="{{ url_for('buy_shares', project_id=project.id) }}">
+            {{ form.hidden_tag() }}
+            <input class="form-control" type="number" name="shares" min="1" max="{{ project.shares_left }}" step="1" required placeholder="Количество акций" aria-label="Количество акций">
+            <button class="btn btn-primary" type="submit">Купить акции</button>
+          </form>
+        {% else %}<p>Все акции распроданы.</p>{% endif %}
+        <a href="{{ url_for('project_detail', project_id=project.id) }}">Отчёты и подробности →</a>
+      </div>
+    </article>
+  {% else %}
+    <div class="card empty-state" style="grid-column:1/-1">Пока нет доступных проектов.</div>
+  {% endfor %}
+</div>
+
+<div class="section-header" style="margin-top:36px">
+  <div><h2>Мои запросы управляющей компании</h2><p style="color:var(--muted)">Создайте запрос и обсуждайте детали в переписке.</p></div>
+  <a class="btn btn-primary" href="{{ url_for('create_request') }}">＋ Создать запрос</a>
+</div>
+<div class="card">
+  {% for inquiry in inquiries %}
+    <div class="list-item">
+      <div class="list-item-content">
+        <strong><a href="{{ url_for('inquiry_detail', inquiry_id=inquiry.id) }}" style="color:inherit">{{ inquiry.title }}</a></strong>
+        <p>Бюджет: {{ '%.2f'|format(inquiry.budget) }} ₽ · {{ inquiry.messages|length }} сообщений · {{ inquiry.status }}</p>
+      </div>
+      <a class="btn btn-secondary" href="{{ url_for('inquiry_detail', inquiry_id=inquiry.id) }}">Открыть переписку</a>
+    </div>
+  {% else %}<p class="empty-state">У вас пока нет запросов.</p>{% endfor %}
+</div>
+
+<div class="section-header" style="margin-top:36px"><h2>Проекты с моими акциями</h2></div>
+{% if donations %}
+  <div class="projects-grid">
+    {% for purchase in donations %}
+      {% set owned = purchase.project.sponsorships|selectattr('sponsor_id', 'equalto', sponsor.id)|map(attribute='shares')|sum %}
+      {% set ownership = (owned / purchase.project.total_shares * 100)|round(2) if purchase.project.total_shares else 0 %}
+      {% if loop.first or purchase.project_id != donations[loop.index0 - 1].project_id %}
+      <article class="card">
+        <h3><a href="{{ url_for('project_detail', project_id=purchase.project.id) }}" style="color:inherit">{{ purchase.project.title }}</a></h3>
+        <p>У вас {{ owned }} акций · доля {{ ownership }}%</p>
+        <div class="progress-bar"><div class="progress-fill" style="--progress:{{ ownership }}%"></div></div>
+        <a href="{{ url_for('project_detail', project_id=purchase.project.id) }}">Открыть проект и отчёты →</a>
+      </article>
+      {% endif %}
+    {% endfor %}
+  </div>
+{% else %}<div class="card empty-state">Пока нет купленных акций.</div>{% endif %}
+{% endblock %}

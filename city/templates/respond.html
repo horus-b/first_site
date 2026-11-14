@@ -1,0 +1,25 @@
+cat > templates/respond.html << 'ENDOFFILE'
+{% extends "base.html" %}
+{% block content %}
+<div style="max-width:640px;margin:24px auto;">
+  <div class="card" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;">
+    <h1 style="font-size:24px;margin-bottom:8px;">{{ req.title }}</h1>
+    <p style="opacity:.9;">{{ req.description[:200] }}{% if req.description|length > 200 %}…{% endif %}</p>
+    <div style="margin-top:16px;">
+      <span class="tag" style="background:rgba(255,255,255,.2);color:#fff;">Бюджет: {{ "%.0f"|format(req.budget) }} ₽</span>
+    </div>
+  </div>
+  <div class="card">
+    <h2 style="font-size:20px;margin-bottom:16px;">Ваше предложение</h2>
+    <form method="post">
+      {{ form.hidden_tag() }}
+      <div class="form-group">
+        <label>Опишите, что и как будете делать</label>
+        {{ form.pitch(class="form-control") }}
+      </div>
+      <button class="btn btn-primary" type="submit">Отправить отклик</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+ENDOFFILE

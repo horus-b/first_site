@@ -1,0 +1,143 @@
+cat > templates/team_profile.html << 'ENDOFFILE'
+{% extends "base.html" %}
+{% block title %}Личный кабинет компании — InvestHub{% endblock %}
+{% block content %}
+
+<div class="profile-header">
+  <div class="profile-avatar" style="background:linear-gradient(135deg,#10b981,#059669);">
+    {{ (team.name or team.user.username)[0]|upper }}
+  </div>
+  <div class="profile-info">
+    <h1>{{ team.name or 'Научная команда' }}</h1>
+    <p>{{ team.field or 'Область не указана' }} · {{ team.user.username }}</p>
+    {% if not public|default(false) %}
+      <button class="btn btn-secondary" style="margin-top:8px;" onclick="document.getElementById('editForm').style.display='block'">
+        ✏️ Редактировать профиль
+      </button>
+    {% endif %}
+  </div>
+</div>
+
+<div class="two-col">
+  <div>
+    {% if not public|default(false) %}
+    <div class="card" id="editForm" style="display:none;">
+      <div class="card-title">Редактировать профиль</div>
+      <form method="post">
+        <div class="form-group">
+          <label>Название команды</label>
+          <input name="name" class="form-control" value="{{ team.name or '' }}">
+        </div>
+        <div class="form-group">
+          <label>Область исследований</label>
+          <input name="field" class="form-control" value="{{ team.field or '' }}">
+        </div>
+        <div class="form-group">
+          <label>Описание</label>
+          <textarea name="description" class="form-control">{{ team.description or '' }}</textarea>
+        </div>
+        <button class="btn btn-primary" type="submit">Сохранить</button>
+      </form>
+    </div>
+    {% endif %}
+    
+    <div class="card">
+      <div class="card-title">О команде</div>
+      <p style="color:#6b7280;line-height:1.6;">{{ team.description or 'Описание пока не добавлено. Расскажите о вашей команде и исследованиях.' }}</p>
+      <div style="margin-top:16px;">
+        <span class="tag tag-purple">{{ team.field or 'Наука' }}</span>
+      </div>
+    </div>
+  </div>
+  
+  <div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div class="card-title" style="margin:0;">Мои объявления</div>
+        <a href="#" style="color:#6366f1;font-size:13px;text-decoration:none;">Все →</a>
+      </div>
+      {% for p in team.projects %}
+        {% set goal = p.goal or 0 %}
+        {% set raised = p.raised or 0 %}
+        {% set percent = (raised / goal * 100)|int if goal > 0 else 0 %}
+      <div class="list-item">
+        <div class="list-item-icon" style="background:#dbeafe;">🚀</div>
+        <div class="list-item-content">
+          <h4>{{ p.title }}</h4>
+          <p>Собрано {{ "%.0f"|format(raised) }} ₽ из {{ "%.0f"|format(goal) }} ₽</p>
+        </div>
+        <div style="text-align:right;">
+          <span class="tag tag-green">Активно</span>
+          <div style="font-size:12px;color:#6b7280;margin-top:4px;">{{ percent }}%</div>
+        </div>
+      </div>
+      {% else %}
+        <p style="color:#6b7280;text-align:center;padding:24px;">У команды пока нет проектов</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Проекты команды</div>
+  <div class="projects-grid">
+    {% for p in team.projects %}
+      {% set goal = p.goal or 0 %}
+      {% set raised = p.raised or 0 %}
+      {% set percent = (raised / goal * 100)|int if goal > 0 else 0 %}
+      {% set img_class = ['eco', 'ai', 'space'][loop.index0 % 3] %}
+      {% set img_emoji = ['🌱', '🤖', '🚀'][loop.index0 % 3] %}
+    <div class="project-card">
+      <div class="project-img {{ img_class }}">
+        {{ img_emoji }}
+      </div>
+      <div class="project-body">
+        <h3>{{ p.title }}</h3>
+        <p>{{ p.description[:80] }}{% if p.description|length > 80 %}…{% endif %}</p>
+        <div class="progress-bar">
+          <div class="progress-fill" data-progress="{{ percent }}"></div>
+        </div>
+        <div class="project-stats">
+          <span><strong>{{ "%.0f"|format(raised) }} ₽</strong> из {{ "%.0f"|format(goal) }} ₽</span>
+          <span>{{ percent }}%</span>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="card" style="grid-column:1/-1;text-align:center;padding:48px;">
+      <p style="color:#6b7280;">У команды пока нет проектов. Откликнитесь на заявку спонсора!</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% if not public|default(false) %}
+<div class="card">
+  <div class="card-title">Мои отклики</div>
+  {% for r in team.responses %}
+  <div class="list-item">
+    <div class="list-item-icon" style="background:#ede9fe;">📩</div>
+    <div class="list-item-content">
+      <h4><a href="{{ url_for('request_detail', req_id=r.request_id) }}" style="color:#1e1b4b;text-decoration:none;">{{ r.request.title }}</a></h4>
+      <p>{{ r.pitch[:100] }}{% if r.pitch|length > 100 %}…{% endif %}</p>
+    </div>
+    <span class="tag {% if r.status == 'accepted' %}tag-green{% elif r.status == 'rejected' %}tag-orange{% else %}tag-blue{% endif %}">
+      {{ r.status }}
+    </span>
+  </div>
+  {% else %}
+    <p style="color:#6b7280;text-align:center;padding:24px;">Вы пока ни на что не откликались</p>
+  {% endfor %}
+</div>
+{% endif %}
+
+<script>
+  // Устанавливаем ширину прогресс-баров через data-атрибут
+  document.querySelectorAll('.progress-fill').forEach(function(el) {
+    var percent = el.getAttribute('data-progress') || 0;
+    el.style.setProperty('--progress', percent + '%');
+  });
+</script>
+
+{% endblock %}
+ENDOFFILE

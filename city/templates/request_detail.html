@@ -1,0 +1,62 @@
+cat > templates/request_detail.html << 'ENDOFFILE'
+{% extends "base.html" %}
+{% block content %}
+<div style="max-width:800px;margin:24px auto;">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px;">
+      <div>
+        <h1 style="font-size:28px;margin-bottom:8px;">{{ req.title }}</h1>
+        <div style="display:flex;gap:8px;">
+          <span class="tag tag-purple">{{ req.sponsor.user.username }}</span>
+          <span class="tag {% if req.status == 'open' %}tag-green{% else %}tag-blue{% endif %}">{{ req.status }}</span>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:13px;color:#6b7280;">Бюджет</div>
+        <div style="font-size:24px;font-weight:700;color:#6366f1;">{{ "%.0f"|format(req.budget) }} ₽</div>
+      </div>
+    </div>
+    <p style="color:#374151;line-height:1.7;">{{ req.description }}</p>
+  </div>
+
+  {% if current_user.is_authenticated and current_user.role == 'team' and req.status == 'open' %}
+    <a class="btn btn-primary" href="{{ url_for('respond_to_request', req_id=req.id) }}" style="margin-bottom:16px;">
+      📩 Откликнуться на заявку
+    </a>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-title">Отклики команд ({{ req.responses|length }})</div>
+    {% for r in req.responses %}
+    <div class="list-item">
+      <div class="list-item-icon" style="background:#d1fae5;">👥</div>
+      <div class="list-item-content">
+        <h4>{{ r.team.name or r.team.user.username }}</h4>
+        <p>{{ r.pitch }}</p>
+      </div>
+      <div style="text-align:right;">
+        <span class="tag {% if r.status == 'accepted' %}tag-green{% elif r.status == 'rejected' %}tag-orange{% else %}tag-blue{% endif %}">
+          {{ r.status }}
+        </span>
+        {% if current_user.is_authenticated and current_user.role == 'sponsor'
+             and req.sponsor.user_id == current_user.id and r.status == 'pending' %}
+          <div style="margin-top:8px;display:flex;gap:8px;">
+            <form method="post" action="{{ url_for('handle_response', resp_id=r.id, action='accept') }}" style="display:inline;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-success" style="padding:6px 12px;font-size:12px;">Принять</button>
+            </form>
+            <form method="post" action="{{ url_for('handle_response', resp_id=r.id, action='reject') }}" style="display:inline;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-danger" style="padding:6px 12px;font-size:12px;">Отклонить</button>
+            </form>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+      <p style="color:#6b7280;text-align:center;padding:24px;">Откликов пока нет</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+ENDOFFILE

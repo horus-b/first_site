@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Заявка — InvestHub{% endblock %}
+{% block content %}
+<div class="card" style="max-width:900px;margin:0 auto">
+  <p><a href="{{ url_for('account') }}">← В личный кабинет</a></p>
+  <h1>{{ inquiry.title }}</h1>
+  <p style="color:var(--muted)">Заявка от {{ inquiry.sponsor.company or inquiry.sponsor.user.username }} · Бюджет: {{ '%.2f'|format(inquiry.budget) }} ₽</p>
+
+  {% if inquiry.status == 'accepted' %}
+    {% for response in inquiry.responses %}
+      {% if response.status == 'accepted' %}
+        <div class="flash success">Разработчик <strong>{{ response.team.name or response.team.user.username }}</strong> взялся за вашу работу.</div>
+      {% endif %}
+    {% endfor %}
+  {% elif inquiry.status == 'open' %}
+    <div class="flash info">Заявка открыта для откликов.</div>
+  {% else %}
+    <div class="flash info">Заявка закрыта.</div>
+  {% endif %}
+
+  <div class="card" style="background:rgba(255,255,255,.04)"><h2>Описание задачи</h2><p style="white-space:pre-line">{{ inquiry.description }}</p></div>
+
+  <section style="margin-top:28px">
+    <h2>Отклики разработчиков</h2>
+    {% for response in inquiry.responses %}
+      <article class="list-item" style="align-items:flex-start">
+        <div class="list-item-content">
+          <strong>{{ response.team.name or response.team.user.username }}</strong>
+          <p>{{ response.created_at.strftime('%d.%m.%Y %H:%M') if response.created_at else '' }}</p>
+          <p style="white-space:pre-line">{{ response.pitch }}</p>
+          {% if response.status == 'accepted' %}
+            <div class="flash success">Этот разработчик выбран исполнителем.</div>
+          {% elif response.status == 'declined' %}
+            <p>Для заявки выбран другой исполнитель.</p>
+          {% elif is_owner and inquiry.status == 'open' %}
+            <form method="post" action="{{ url_for('accept_inquiry_response', inquiry_id=inquiry.id, response_id=response.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-primary" type="submit">Выбрать исполнителем</button>
+            </form>
+          {% endif %}
+        </div>
+      </article>
+    {% else %}<p style="color:var(--muted)">Откликов пока нет.</p>{% endfor %}
+  </section>
+
+  {% if current_user.role == 'team' and inquiry.status == 'open' and not my_response %}
+    <section style="margin-top:28px">
+      <h2>Откликнуться на заявку</h2>
+      <form method="post" action="{{ url_for('apply_to_inquiry', inquiry_id=inquiry.id) }}">
+        {{ response_form.hidden_tag() }}
+        <div class="form-group">
+          {{ response_form.pitch.label }}
+          {{ response_form.pitch(class="form-control", rows="5", placeholder="Опишите, как ваша команда выполнит эту работу") }}
+          {% for error in response_form.pitch.errors %}<div class="flash danger">{{ error }}</div>{% endfor %}
+        </div>
+        {{ response_form.submit(class="btn btn-primary") }}
+      </form>
+    </section>
+  {% elif my_response %}<div class="flash info" style="margin-top:20px">Ваша команда уже откликнулась.</div>{% endif %}
+
+  <section style="margin-top:28px">
+    <h2>Переписка</h2>
+    {% for message in inquiry.messages %}
+      <article class="list-item" style="align-items:flex-start"><div class="list-item-content"><strong>{{ message.sender.username }}</strong><p>{{ message.created_at.strftime('%d.%m.%Y %H:%M') if message.created_at else '' }}</p><div style="white-space:pre-line">{{ message.body }}</div></div></article>
+    {% else %}<p style="color:var(--muted)">Сообщений пока нет.</p>{% endfor %}
+    {% if inquiry.status != 'closed' %}
+      <form method="post" style="margin-top:18px">
+        {{ form.hidden_tag() }}
+        <div class="form-group">{{ form.body.label }}{{ form.body(class="form-control", rows="4", placeholder="Уточните детали заявки") }}{% for error in form.body.errors %}<div class="flash danger">{{ error }}</div>{% endfor %}</div>
+        {{ form.submit(class="btn btn-primary") }}
+      </form>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Мои проекты — InvestHub{% endblock %}
+{% block content %}
+<section class="section-header">
+  <h1>Мои проекты</h1>
+  {% if current_user.role == 'team' %}
+    <a class="btn btn-primary" href="{{ url_for('index') }}">Найти заявки</a>
+  {% endif %}
+</section>
+<div class="projects-grid">
+  {% for project in projects %}
+    {% set goal = project.goal or 0 %}
+    {% set raised = project.raised or 0 %}
+    {% set percent = (raised / goal * 100)|int if goal > 0 else 0 %}
+    <article class="project-card">
+      <div class="project-img">
+        🚀
+        <span class="project-tag">{{ project.status }}</span>
+      </div>
+      <div class="project-body">
+        <h3>{{ project.title }}</h3>
+        <p>{{ project.description }}</p>
+        <div class="progress-bar"><div class="progress-fill" style="--progress: {{ [percent, 100]|min }}%"></div></div>
+        <div class="project-stats">
+          <span><strong>{{ "%.0f"|format(raised) }} ₽</strong> из {{ "%.0f"|format(goal) }} ₽</span>
+          <span>{{ percent }}%</span>
+        </div>
+      </div>
+    </article>
+  {% else %}
+    <div class="card" style="grid-column:1/-1;text-align:center;padding:40px">
+      <p style="color:#6b7280">Пока проектов нет.</p>
+      {% if current_user.role == 'team' %}<p style="margin-top:12px"><a class="btn btn-primary" href="{{ url_for('index') }}">Посмотреть открытые заявки</a></p>{% endif %}
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

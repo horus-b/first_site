@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Проекты — InvestHub{% endblock %}
+
+{% block content %}
+<div class="section-header">
+  <div>
+    <h1>Каталог проектов</h1>
+    <p style="color:var(--muted);margin-top:7px">
+      Откройте проект, чтобы посмотреть его описание и спонсоров.
+    </p>
+  </div>
+</div>
+
+<div class="projects-grid">
+  {% for project in projects %}
+    {% set goal = project.goal or 0 %}
+    {% set raised = project.raised or 0 %}
+    {% set progress = [((raised / goal * 100)|round|int), 100]|min if goal > 0 else 0 %}
+
+    <article class="project-card">
+      <a
+        href="{{ url_for('project_detail', project_id=project.id) }}"
+        style="color:inherit;text-decoration:none"
+      >
+        <div class="project-img">
+          🌸
+          <span class="project-tag">{{ project.team.field or 'Проект' }}</span>
+        </div>
+
+        <div class="project-body">
+          <h3>{{ project.title }}</h3>
+          <p>
+            {{ project.description[:180] }}
+            {% if project.description|length > 180 %}…{% endif %}
+          </p>
+
+          <div class="progress-bar">
+            <div class="progress-fill" style="--progress:{{ progress }}%"></div>
+          </div>
+
+          <div class="progress-caption">
+            <span>{{ '%.2f'|format(raised) }} ₽ из {{ '%.2f'|format(goal) }} ₽</span>
+            <strong>{{ progress }}%</strong>
+          </div>
+
+          <p style="margin-top:14px">Открыть проект и список спонсоров →</p>
+        </div>
+      </a>
+    </article>
+  {% else %}
+    <div class="card empty-state" style="grid-column:1/-1">
+      Пока опубликованных проектов нет.
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

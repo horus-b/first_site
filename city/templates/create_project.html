@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Создать проект — InvestHub{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:760px;margin:24px auto">
+  <h1 class="card-title">Опубликовать проект</h1>
+
+  <p style="color:var(--muted);margin-bottom:20px">
+    Укажите количество акций и цену одной акции. Цель проекта будет
+    рассчитана автоматически.
+  </p>
+
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+
+    <div class="form-group">
+      {{ form.title.label }}
+      {{ form.title(class="form-control", placeholder="Название проекта") }}
+      {% for error in form.title.errors %}
+        <div class="flash danger">{{ error }}</div>
+      {% endfor %}
+    </div>
+
+    <div class="form-group">
+      {{ form.description.label }}
+      {{ form.description(
+        class="form-control",
+        rows="6",
+        placeholder="Расскажите о цели и пользе проекта"
+      ) }}
+      {% for error in form.description.errors %}
+        <div class="flash danger">{{ error }}</div>
+      {% endfor %}
+    </div>
+
+    <div class="form-group">
+      {{ form.total_shares.label }}
+      {{ form.total_shares(
+        class="form-control",
+        min="1",
+        max="1000000",
+        step="1",
+        placeholder="Например, 1000"
+      ) }}
+      {% for error in form.total_shares.errors %}
+        <div class="flash danger">{{ error }}</div>
+      {% endfor %}
+    </div>
+
+    <div class="form-group">
+      {{ form.share_price.label }}
+      {{ form.share_price(
+        class="form-control",
+        min="0.01",
+        step="0.01",
+        placeholder="Например, 100"
+      ) }}
+      {% for error in form.share_price.errors %}
+        <div class="flash danger">{{ error }}</div>
+      {% endfor %}
+    </div>
+
+    {{ form.submit(class="btn btn-primary") }}
+    <a class="btn btn-secondary" href="{{ url_for('account') }}">Отмена</a>
+  </form>
+</div>
+{% endblock %}

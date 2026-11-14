@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.title }} — InvestHub{% endblock %}
+
+{% block content %}
+{% set is_owner = (
+  current_user.is_authenticated
+  and current_user.role == 'team'
+  and project.team.user_id == current_user.id
+) %}
+
+<div class="card" style="max-width:900px;margin:0 auto">
+  <div class="project-img" style="border-radius:14px">
+    🧪
+    <span class="project-tag">{{ project.team.field or 'Проект' }}</span>
+  </div>
+
+  <h1 style="margin:24px 0 12px">{{ project.title }}</h1>
+
+  <p style="color:var(--muted);line-height:1.7;white-space:pre-line;word-break:break-word">
+    {{ project.description }}
+  </p>
+
+  <p style="margin-top:18px">
+    Команда:
+    <strong>{{ project.team.name or project.team.user.username or 'Команда' }}</strong>
+  </p>
+
+  <div class="progress-bar">
+    <div class="progress-fill" style="--progress:{{ project.progress }}%"></div>
+  </div>
+
+  <div class="progress-caption">
+    <span>Продано {{ project.sold_shares }} из {{ project.total_shares }} акций</span>
+    <strong>{{ project.progress }}%</strong>
+  </div>
+
+  <div class="project-stats" style="margin-top:10px;flex-wrap:wrap">
+    <span>Цена акции: <strong>{{ '%.2f'|format(project.share_price) }} ₽</strong></span>
+    <span>
+      Собрано: <strong>{{ '%.2f'|format(project.raised) }} ₽</strong>
+      из {{ '%.2f'|format(project.goal) }} ₽
+    </span>
+    <span>Осталось: <strong>{{ project.shares_left }} акций</strong></span>
+  </div>
+
+  {% if is_owner %}
+    <div class="flash info" style="margin-top:20px">
+      Это ваш проект. Здесь можно просматривать акционеров и отчёты.
+      Покупка собственных акций недоступна.
+    </div>
+
+  {% elif current_user.is_authenticated and current_user.role == 'sponsor' %}
+    {% set my_shares = namespace(total=0) %}
+    {% for purchase in project.sponsorships %}
+      {% if purchase.sponsor.user_id == current_user.id %}
+        {% set my_shares.total = my_shares.total + purchase.shares %}
+      {% endif %}
+    {% endfor %}
+
+    {% if my_shares.total > 0 %}
+      {% set my_percent = (
+        my_shares.total / project.total_shares * 100
+      )|round(2) if project.total_shares else 0 %}
+
+      <div class="card" style="margin-top:20px;background:rgba(255,255,255,.05)">
+        <h3>Ваша доля в проекте</h3>
+        <p>
+          У вас <strong>{{ my_shares.total }} акций</strong>
+          — <strong>{{ my_percent }}%</strong> от общего количества.
+        </p>
+      </div>
+    {% endif %}
+
+    {% if project.status == 'active' and project.shares_left > 0 %}
+      <form
+        class="donate-form"
+        method="post"
+        action="{{ url_for('buy_shares', project_id=project.id) }}"
+      >
+        {{ form.hidden_tag() }}
+
+        <input
+          class="form-control"
+          type="number"
+          name="shares"
+          min="1"
+          max="{{ project.shares_left }}"
+          step="1"
+          required
+          placeholder="Количество акций"
+          aria-label="Количество акций"
+        >
+
+        <button class="btn btn-primary" type="submit">Купить акции</button>
+      </form>
+    {% else %}
+      <p style="margin-top:18px">Все акции проекта распроданы.</p>
+    {% endif %}
+
+  {% elif not current_user.is_authenticated %}
+    {% if project.status == 'active' and project.shares_left > 0 %}
+      <p style="margin-top:18px">
+        <a href="{{ url_for('login') }}">Войдите как инвестор</a>,
+        чтобы купить акции проекта.
+      </p>
+    {% endif %}
+  {% endif %}
+
+  <section style="margin-top:32px">
+    <h2>Акционеры проекта</h2>
+
+    {% for sponsor, total_shares, total_amount in sponsors %}
+      {% set sponsor_percent = (
+        total_shares / project.total_shares * 100
+      )|round(2) if project.total_shares else 0 %}
+
+      <div class="list-item">
+        <div class="list-item-content">
+          <strong>{{ sponsor.company or sponsor.user.username }}</strong>
+          <p>Доля в проекте</p>
+        </div>
+
+        <div style="text-align:right">
+          <strong>{{ total_shares }} акций</strong>
+          <p>{{ sponsor_percent }}% · {{ '%.2f'|format(total_amount) }} ₽</p>
+        </div>
+      </div>
+    {% else %}
+      <p style="color:var(--muted);margin-top:14px">
+        Пока никто не купил акции.
+      </p>
+    {% endfor %}
+  </section>
+
+  <section style="margin-top:32px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <h2>Отчёты и этапы проекта</h2>
+
+      {% if is_owner %}
+        <a
+          class="btn btn-primary"
+          href="{{ url_for('create_project_update', project_id=project.id) }}"
+        >＋ Добавить отчёт</a>
+      {% endif %}
+    </div>
+
+    {% for update in project.updates %}
+      <article class="card" style="margin-top:14px;background:rgba(255,255,255,.04)">
+        <h3 style="color:#f4bdd4">{{ update.title }}</h3>
+        <p style="font-size:12px;color:var(--muted)">
+          {{ update.created_at.strftime('%d.%m.%Y %H:%M') if update.created_at else '' }}
+        </p>
+        <p style="white-space:pre-line;line-height:1.6">{{ update.content }}</p>
+      </article>
+    {% else %}
+      <p style="color:var(--muted);margin-top:14px">
+        Команда пока не публиковала отчёты.
+      </p>
+    {% endfor %}
+  </section>
+
+  <p style="margin-top:24px">
+    <a href="{{ url_for('projects_catalog') }}">← Вернуться к проектам</a>
+  </p>
+</div>
+{% endblock %}

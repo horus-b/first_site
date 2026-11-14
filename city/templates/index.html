@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Главная — InvestHub{% endblock %}
+{% block content %}
+<style>
+  .home-content { width: 100%; margin: 0; }
+  .home-content .hero { align-items: flex-start; text-align: left; }
+  .home-content .projects-grid { justify-content: start; justify-items: start; }
+  .home-content .project-card { width: 100%; max-width: 380px; }
+  @media (max-width: 768px) { .home-content .project-card { max-width: none; } }
+</style>
+<div class="home-content">
+  <section class="hero">
+    <h1>Инвестируй<br>в инновации</h1>
+    <p>Платформа, где исследователи находят поддержку, а спонсоры — перспективные проекты.</p>
+    <a class="hero-btn" href="{{ url_for('projects_catalog') }}">Смотреть проекты →</a>
+  </section>
+
+  <section id="projects">
+    <div class="section-header">
+      <h2>Популярные проекты</h2>
+      <a href="{{ url_for('projects_catalog') }}">Все проекты →</a>
+    </div>
+    <div class="projects-grid">
+      {% for project in projects %}
+        <article class="project-card">
+          <a href="{{ url_for('project_detail', project_id=project.id) }}" style="color:inherit;text-decoration:none;display:block">
+            <div class="project-img">🧪<span class="project-tag">{{ project.team.field or 'Наука' }}</span></div>
+            <div class="project-body">
+              <h3>{{ project.title }}</h3>
+              <p>{{ project.description[:120] }}{% if project.description|length > 120 %}…{% endif %}</p>
+              <div class="progress-bar"><div class="progress-fill" style="--progress:{{ project.progress }}%"></div></div>
+              <div class="progress-caption"><span>{{ project.sold_shares }} из {{ project.total_shares }} акций</span><strong>{{ project.progress }}%</strong></div>
+              <div class="project-stats" style="margin-top:8px;flex-wrap:wrap"><span>{{ '%.2f'|format(project.share_price) }} ₽ / акция</span><span>Цель: {{ '%.2f'|format(project.goal) }} ₽</span></div>
+            </div>
+          </a>
+        </article>
+      {% else %}
+        <div class="card empty-state">Активных проектов пока нет.</div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section style="margin-top:36px">
+    <div class="section-header">
+      <div><h2>Открытые заявки спонсоров</h2><p style="color:var(--muted)">Разработчики могут посмотреть задачи и отправить инвестору предложение.</p></div>
+      {% if current_user.is_authenticated and current_user.role == 'sponsor' %}
+        <a class="btn btn-primary" href="{{ url_for('create_request') }}">＋ Создать заявку</a>
+      {% endif %}
+    </div>
+    <div class="projects-grid">
+      {% for inquiry in inquiries %}
+        <article class="card" style="width:100%;max-width:420px">
+          <h3>{{ inquiry.title }}</h3>
+          <p>{{ inquiry.description[:180] }}{% if inquiry.description|length > 180 %}…{% endif %}</p>
+          <p style="margin-top:10px">Бюджет: <strong>{{ '%.2f'|format(inquiry.budget) }} ₽</strong></p>
+          {% if current_user.is_authenticated %}
+            <a class="btn btn-secondary" href="{{ url_for('inquiry_detail', inquiry_id=inquiry.id) }}">Посмотреть заявку →</a>
+          {% else %}
+            <a class="btn btn-secondary" href="{{ url_for('login') }}">Войдите, чтобы посмотреть заявку</a>
+          {% endif %}
+        </article>
+      {% else %}
+        <div class="card empty-state" style="width:100%">Пока нет открытых заявок.</div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

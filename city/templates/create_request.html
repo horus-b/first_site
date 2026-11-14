@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Новый запрос — InvestHub{% endblock %}
+{% block content %}
+<div style="max-width:720px;margin:24px auto"><div class="card auth-card"><h1>Запрос управляющей компании</h1><p style="color:var(--muted);margin-bottom:20px">Опишите задачу, бюджет и ожидаемый результат. Разработчики смогут откликнуться.</p>
+<form method="post" novalidate>{{ form.hidden_tag() }}
+<div class="form-group">{{ form.title.label }}{{ form.title(class="form-control", placeholder="Краткая тема запроса") }}{% for error in form.title.errors %}<div class="flash danger">{{ error }}</div>{% endfor %}</div>
+<div class="form-group">{{ form.description.label }}{{ form.description(class="form-control", rows="6", placeholder="Что нужно сделать и какой результат ожидается?") }}{% for error in form.description.errors %}<div class="flash danger">{{ error }}</div>{% endfor %}</div>
+<div class="form-group">{{ form.budget.label }}{{ form.budget(class="form-control", min="0.01", step="0.01", placeholder="Например, 500000") }}{% for error in form.budget.errors %}<div class="flash danger">{{ error }}</div>{% endfor %}</div>
+{{ form.submit(class="btn btn-primary") }} <a class="btn btn-secondary" href="{{ url_for('account') }}">Отмена</a>
+</form></div></div>
+{% endblock %}
